@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Samma, Membership Model</title>
+<style>
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --ink: #2c3330;
+    --muted: #6f7a75;
+    --accent: #4d6b5c;
+    --accent-soft: #e3ebe6;
+    --gold: #b08d4f;
+    --red: #b0503f;
+    --border: #e4e0d7;
+    --radius: 14px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Georgia", "Times New Roman", serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .sans { font-family: "Helvetica Neue", Arial, sans-serif; }
+
+  /* ---------- Password gate ---------- */
+  #gate {
+    position: fixed; inset: 0; z-index: 100;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #gate .box {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 2.5rem 2.8rem;
+    text-align: center; max-width: 340px; width: 90%;
+    box-shadow: 0 8px 30px rgba(44,51,48,.08);
+  }
+  #gate h1 { font-size: 1.4rem; font-weight: normal; letter-spacing: .05em; margin-bottom: .3rem; }
+  #gate p { color: var(--muted); font-size: .85rem; margin-bottom: 1.4rem; }
+  #gate input {
+    width: 100%; padding: .65rem .9rem; font-size: 1rem;
+    border: 1px solid var(--border); border-radius: 8px; outline: none;
+    text-align: center;
+  }
+  #gate input:focus { border-color: var(--accent); }
+  #gate button {
+    margin-top: .9rem; width: 100%; padding: .65rem;
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    font-size: .95rem; cursor: pointer; letter-spacing: .04em;
+  }
+  #gate button:hover { background: #3e5a4c; }
+  #gate .err { color: var(--red); font-size: .8rem; margin-top: .7rem; min-height: 1.1em; }
+
+  /* ---------- Layout ---------- */
+  header {
+    padding: 2rem 2rem 1.2rem;
+    max-width: 1240px; margin: 0 auto;
+  }
+  header h1 { font-size: 1.7rem; font-weight: normal; letter-spacing: .03em; }
+  header p { color: var(--muted); font-size: .92rem; margin-top: .3rem; max-width: 60rem; }
+  .wrap {
+    max-width: 1240px; margin: 0 auto; padding: 0 2rem 3rem;
+    display: grid; grid-template-columns: 360px 1fr; gap: 1.4rem;
+    align-items: start;
+  }
+  @media (max-width: 980px) { .wrap { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.3rem 1.4rem;
+  }
+  .panel h2 {
+    font-size: .78rem; text-transform: uppercase; letter-spacing: .14em;
+    color: var(--accent); font-weight: 600; margin-bottom: 1rem;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+  .controls .panel + .panel { margin-top: 1.4rem; }
+
+  /* ---------- Sliders ---------- */
+  .ctl { margin-bottom: 1.05rem; }
+  .ctl:last-child { margin-bottom: .2rem; }
+  .ctl .lbl {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: .84rem; margin-bottom: .25rem;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+  .ctl .lbl .val { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ctl input[type=range] {
+    width: 100%; -webkit-appearance: none; appearance: none; height: 4px;
+    background: var(--accent-soft); border-radius: 2px; outline: none;
+  }
+  .ctl input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--accent); cursor: pointer;
+    border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25);
+  }
+  .ctl input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%; background: var(--accent);
+    cursor: pointer; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25);
+  }
+  .hint { font-size: .72rem; color: var(--muted); margin-top: .15rem; font-family: "Helvetica Neue", Arial, sans-serif; }
+
+  /* ---------- KPI cards ---------- */
+  .kpis {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem; margin-bottom: 1.4rem;
+  }
+  .kpi {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem 1.1rem;
+  }
+  .kpi .k {
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .12em;
+    color: var(--muted); font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+  .kpi .v { font-size: 1.45rem; margin-top: .25rem; font-variant-numeric: tabular-nums; }
+  .kpi .s { font-size: .74rem; color: var(--muted); margin-top: .15rem; font-family: "Helvetica Neue", Arial, sans-serif; }
+  .pos { color: var(--accent); }
+  .neg { color: var(--red); }
+
+  /* ---------- Alerts & insight ---------- */
+  .alert {
+    border-radius: 10px; padding: .8rem 1rem; font-size: .85rem;
+    margin-bottom: 1.4rem; display: none;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+  .alert.warn { display: block; background: #f7ece2; border: 1px solid #e2c9a8; color: #7a5a2e; }
+  .insight {
+    background: var(--accent-soft); border: 1px solid #ccdbd2;
+    border-radius: var(--radius); padding: 1.1rem 1.3rem;
+    font-size: .9rem; margin-bottom: 1.4rem;
+  }
+  .insight b { color: var(--accent); }
+
+  /* ---------- Charts ---------- */
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; }
+  @media (max-width: 1180px) { .charts { grid-template-columns: 1fr; } }
+  .chart-box canvas { width: 100%; height: 260px; display: block; }
+  .chart-box .cap { font-size: .74rem; color: var(--muted); margin-top: .5rem; font-family: "Helvetica Neue", Arial, sans-serif; }
+
+  /* ---------- Detail table ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; font-family: "Helvetica Neue", Arial, sans-serif; }
+  td { padding: .4rem 0; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.section { padding-top: .9rem; font-weight: 600; color: var(--accent); font-size: .72rem; text-transform: uppercase; letter-spacing: .12em; border-bottom: none; }
+  footer { text-align: center; color: var(--muted); font-size: .75rem; padding: 0 2rem 2rem; font-family: "Helvetica Neue", Arial, sans-serif; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h1>Samma</h1>
+    <p>Membership model, internal tool.<br>Enter the access password.</p>
+    <input type="password" id="pw" autocomplete="off" autofocus>
+    <button id="pwbtn">Enter</button>
+    <div class="err" id="pwerr"></div>
+  </div>
+</div>
+
+<header>
+  <h1>Samma, Membership Model</h1>
+  <p>Interactive model of the monthly economics of the centre: single-session clients versus annual members.
+     Move the sliders to explore pricing, capacity and mix, and find the balance where the project is sustainable.</p>
+</header>
+
+<div class="wrap">
+
+  <!-- ================= CONTROLS ================= -->
+  <div class="controls">
+
+    <div class="panel">
+      <h2>Costs</h2>
+      <div class="ctl">
+        <div class="lbl"><span>Fixed costs / month</span><span class="val" id="v-fixed"></span></div>
+        <input type="range" id="fixed" min="5000" max="80000" step="1000" value="25000">
+        <div class="hint">Rent, insurance, admin, marketing, salaried staff&hellip;</div>
+      </div>
+      <div class="ctl">
+        <div class="lbl"><span>Variable cost / session</span><span class="val" id="v-varcost"></span></div>
+        <input type="range" id="varcost" min="0" max="120" step="5" value="20">
+        <div class="hint">Consumables, laundry, energy, per-session practitioner pay&hellip;</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Capacity</h2>
+      <div class="ctl">
+        <div class="lbl"><span>Practitioners</span><span class="val" id="v-pract"></span></div>
+        <input type="range" id="pract" min="1" max="10" step="1" value="4">
+      </div>
+      <div class="ctl">
+        <div class="lbl"><span>Sessions / day / practitioner</span><span class="val" id="v-perday"></span></div>
+        <input type="range" id="perday" min="1" max="12" step="1" value="6">
+        <div class="hint">22 working days per month per practitioner.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Membership</h2>
+      <div class="ctl">
+        <div class="lbl"><span>Annual membership price</span><span class="val" id="v-annual"></span></div>
+        <input type="range" id="annual" min="1000" max="6000" step="100" value="3000">
+      </div>
+      <div class="ctl">
+        <div class="lbl"><span>Sessions included / month</span><span class="val" id="v-included"></span></div>
+        <input type="range" id="included" min="1" max="10" step="1" value="4">
+        <div class="hint">Unused sessions are lost at the end of each month.</div>
+      </div>
+      <div class="ctl">
+        <div class="lbl"><span>Member utilisation rate</span><span class="val" id="v-util"></span></div>
+        <input type="range" id="util" min="0" max="100" step="5" value="75">
+        <div class="hint">Share of included sessions members actually use.</div>
+      </div>
+      <div class="ctl">
+        <div class="lbl"><span>Number of members</span><span class="val" id="v-members"></span></div>
+        <input type="range" id="members" min="0" max="300" step="5" value="50">
+        <div class="hint">Members are served first: their used sessions are booked before any single session.</div>
+      </div>
+      <div class="ctl">
+        <div class="lbl"><span>Share of members</span><span class="val" id="v-share"></span></div>
+        <div class="hint">Computed: member sessions used / monthly capacity.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Single session</h2>
+      <div class="ctl">
+        <div class="lbl"><span>Single session price</span><span class="val" id="v-unit"></span></div>
+        <input type="range" id="unit" min="60" max="250" step="5" value="160">
+      </div>
+      <div class="ctl">
+        <div class="lbl"><span>Available single session fill rate</span><span class="val" id="v-fillrate"></span></div>
+        <input type="range" id="fillrate" min="0" max="100" step="5" value="60">
+        <div class="hint">Share of the remaining non-member slots that get booked.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ================= RESULTS ================= -->
+  <div class="results">
+
+    <div class="kpis">
+      <div class="kpi"><div class="k">Monthly profit</div><div class="v" id="k-profit"></div><div class="s" id="k-margin"></div></div>
+      <div class="kpi"><div class="k">Break-even</div><div class="v" id="k-be"></div><div class="s" id="k-be-sub"></div></div>
+      <div class="kpi"><div class="k">Occupancy</div><div class="v" id="k-occ"></div><div class="s" id="k-occ-sub"></div></div>
+      <div class="kpi"><div class="k">Monthly revenue</div><div class="v" id="k-rev"></div><div class="s" id="k-rev-sub"></div></div>
+    </div>
+
+    <div class="alert warn" id="alert-crowd"></div>
+    <div class="alert warn" id="alert-cap"></div>
+
+    <div class="insight" id="insight"></div>
+
+    <div class="charts">
+      <div class="panel chart-box">
+        <h2>Profit vs. number of members</h2>
+        <canvas id="chart-mix"></canvas>
+        <div class="cap">Monthly profit as the number of members grows, everything else unchanged. The dot marks the current setting.</div>
+      </div>
+      <div class="panel chart-box">
+        <h2>Profit vs. single session fill rate</h2>
+        <canvas id="chart-fill"></canvas>
+        <div class="cap">Monthly profit as the available single session fill rate moves from 0% to 100%, at the current number of members. The vertical line marks break-even.</div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:1.4rem">
+      <h2>Monthly detail</h2>
+      <table id="detail"></table>
+    </div>
+
+  </div>
+</div>
+
+<footer>Samma, internal decision tool. Figures in CHF. This model is a simplification and not an accounting forecast.</footer>
+
+<script>
+"use strict";
+
+/* ---------------- Password gate (light deterrent, client-side only) ---------------- */
+(function () {
+  const KEY = "samma-model-auth";
+  const EXPECTED = "aGFybW9uaWs=";
+  const gate = document.getElementById("gate");
+  const input = document.getElementById("pw");
+  const err = document.getElementById("pwerr");
+  function tryPw() {
+    let ok = false;
+    try { ok = btoa(input.value.trim().toLowerCase()) === EXPECTED; } catch (e) { ok = false; }
+    if (ok) { sessionStorage.setItem(KEY, "1"); gate.style.display = "none"; }
+    else { err.textContent = "Incorrect password."; input.value = ""; }
+  }
+  document.getElementById("pwbtn").addEventListener("click", tryPw);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") tryPw(); });
+  if (sessionStorage.getItem(KEY) === "1") gate.style.display = "none";
+})();
+
+/* ---------------- Model ---------------- */
+const WORKING_DAYS = 22;
+
+const SLIDERS = ["fixed","varcost","pract","perday","unit","annual","included","util","members","fillrate"];
+
+function params() {
+  const g = id => parseFloat(document.getElementById(id).value);
+  return {
+    fixed: g("fixed"),
+    varCost: g("varcost"),
+    practitioners: g("pract"),
+    perDay: g("perday"),
+    unitPrice: g("unit"),
+    annualPrice: g("annual"),
+    included: g("included"),
+    util: g("util") / 100,
+    members: g("members"),
+    fillrate: g("fillrate") / 100,
+  };
+}
+
+/* Core of the model. The number of members is an input, capped by capacity:
+   memberships that the schedule cannot honour are refused, and only served
+   members generate revenue. Members are served first: the sessions they
+   actually use (included × utilisation) are booked before anything else.
+   The single-session fill rate applies to whatever capacity is left. */
+function compute(p, o) {
+  o = o || {};
+  const members = o.members !== undefined ? o.members : p.members;
+  const fillrate = o.fillrate !== undefined ? o.fillrate : p.fillrate;
+
+  const capacity = p.practitioners * p.perDay * WORKING_DAYS;
+
+  // Cap the membership base at what capacity can honour.
+  const perMember = p.included * p.util;
+  const maxMembers = perMember > 0 ? capacity / perMember : Infinity;
+  const membersServed = Math.min(members, maxMembers);
+  const membersRefused = members - membersServed;
+
+  // Sessions actually used by served members (priority booking).
+  const memberSessions = membersServed * perMember;
+
+  // Single sessions: the fill rate applies to the capacity left by members.
+  const availableSingle = Math.max(capacity - memberSessions, 0);
+  const singleSessions = fillrate * availableSingle;
+
+  const memberRevenue = membersServed * p.annualPrice / 12;
+  const singleRevenue = singleSessions * p.unitPrice;
+  const revenue = memberRevenue + singleRevenue;
+
+  const totalSessions = memberSessions + singleSessions;
+  const variableCosts = totalSessions * p.varCost;
+  const profit = revenue - p.fixed - variableCosts;
+
+  return {
+    capacity, members, membersServed, membersRefused, memberSessions,
+    availableSingle, singleSessions,
+    memberRevenue, singleRevenue, revenue,
+    totalSessions, variableCosts, profit,
+    occupancy: capacity > 0 ? totalSessions / capacity : 0,
+    memberShare: capacity > 0 ? memberSessions / capacity : 0,
+  };
+}
+
+/* Break-even on the single-session fill rate. Profit is linear in the fill
+   rate; it decreases when the single price is below the variable cost.
+   Returns null (never profitable), {always:true} (profitable everywhere),
+   or {fill, rising} where rising says which side of the crossing is safe. */
+function breakEvenFill(p) {
+  const p0 = compute(p, { fillrate: 0 }).profit;
+  const p1 = compute(p, { fillrate: 1 }).profit;
+  if (p0 < 0 && p1 < 0) return null;
+  if (p0 >= 0 && p1 >= 0) return { always: true };
+  const rising = p1 > p0;
+  for (let f = 0; f <= 100; f++) {
+    const prof = compute(p, { fillrate: f / 100 }).profit;
+    if (rising && prof >= 0) return { fill: f / 100, rising: true };
+    if (!rising && prof < 0) return { fill: (f - 1) / 100, rising: false };
+  }
+  return null;
+}
+
+/* ---------------- Formatting ---------------- */
+const chf = x => "CHF " + Math.round(x).toLocaleString("fr-CH");
+const num = x => Math.round(x).toLocaleString("fr-CH");
+/* One decimal when the value is fractional, so displayed volumes multiply
+   back into the displayed money without apparent rounding errors. */
+const num1 = x => (Math.abs(x - Math.round(x)) < 0.05 ? Math.round(x) : Math.round(x * 10) / 10).toLocaleString("fr-CH");
+const pct = x => Math.round(x * 100) + "%";
+
+/* ---------------- Rendering ---------------- */
+function renderSliderValues(p) {
+  const set = (id, txt) => document.getElementById(id).textContent = txt;
+  set("v-fixed", chf(p.fixed));
+  set("v-varcost", chf(p.varCost));
+  set("v-pract", p.practitioners);
+  set("v-perday", p.perDay);
+  set("v-unit", chf(p.unitPrice));
+  set("v-annual", chf(p.annualPrice) + " / year");
+  set("v-included", p.included + " / month");
+  set("v-util", pct(p.util));
+  set("v-members", num(p.members));
+  set("v-fillrate", pct(p.fillrate));
+}
+
+function renderKpis(p, r) {
+  const el = id => document.getElementById(id);
+  el("k-profit").textContent = chf(r.profit);
+  el("k-profit").className = "v " + (r.profit >= 0 ? "pos" : "neg");
+  el("k-margin").textContent = r.revenue > 0 ? "margin " + pct(r.profit / r.revenue) : "no revenue";
+
+  const be = breakEvenFill(p);
+  if (be === null) {
+    el("k-be").textContent = "unreachable";
+    el("k-be").className = "v neg";
+    el("k-be-sub").textContent = "not profitable at any single-session fill rate";
+  } else if (be.always) {
+    el("k-be").textContent = "any fill";
+    el("k-be").className = "v pos";
+    el("k-be-sub").textContent = "profitable across the whole fill range, with " + num1(r.membersServed) + " members";
+  } else if (be.rising) {
+    el("k-be").textContent = pct(be.fill) + " fill";
+    el("k-be").className = "v " + (p.fillrate >= be.fill ? "pos" : "");
+    el("k-be-sub").textContent = "minimum single-session fill to break even, with " + num1(r.membersServed) + " members";
+  } else {
+    el("k-be").textContent = pct(be.fill) + " fill max";
+    el("k-be").className = "v " + (p.fillrate <= be.fill ? "pos" : "neg");
+    el("k-be-sub").textContent = "singles sell below variable cost: stay under this fill to break even";
+  }
+
+  el("k-occ").textContent = pct(r.occupancy);
+  el("k-occ").className = "v " + (r.occupancy > 0.95 ? "neg" : "");
+  el("k-occ-sub").textContent = num(r.totalSessions) + " of " + num(r.capacity) + " sessions";
+
+  el("k-rev").textContent = chf(r.revenue);
+  el("k-rev-sub").textContent = "members " + chf(r.memberRevenue) + " · single " + chf(r.singleRevenue);
+}
+
+function renderAlerts(p, r) {
+  const crowd = document.getElementById("alert-crowd");
+  if (r.availableSingle < 1 && p.members > 0) {
+    crowd.className = "alert warn";
+    crowd.innerHTML = "<b>Members fill the whole schedule:</b> no single-session slots are left this month.";
+  } else if (r.memberShare >= 0.9 && p.members > 0) {
+    crowd.className = "alert warn";
+    crowd.innerHTML = "<b>Very few single-session slots:</b> members use " + pct(r.memberShare) +
+      " of capacity, only " + num1(r.availableSingle) + " single-session slot" +
+      (r.availableSingle >= 1.95 ? "s" : "") + " remain this month.";
+  } else crowd.className = "alert";
+
+  const cap = document.getElementById("alert-cap");
+  if (r.membersRefused > 0.05) {
+    cap.className = "alert warn";
+    cap.innerHTML = "<b>Capacity caps the membership base:</b> the schedule can honour " +
+      num1(r.membersServed) + " members, so " + num1(r.membersRefused) + " of the " +
+      num(r.members) + " requested cannot be signed. Only served members are counted in the figures.";
+  } else cap.className = "alert";
+}
+
+function renderInsight(p, r) {
+  const monthlyFee = p.annualPrice / 12;
+  const used = p.included * p.util;
+  let html = "A member pays <b>" + chf(monthlyFee) + " per month</b>";
+  if (used <= 0) {
+    html += " and uses <b>no sessions</b>: pure breakage. The full fee is margin and no capacity is consumed, but a membership nobody uses will not be renewed.";
+  } else {
+    const effective = monthlyFee / used;
+    const marginMember = effective - p.varCost;
+    const marginUnit = p.unitPrice - p.varCost;
+    html += " and uses about <b>" + (Math.round(used * 10) / 10) +
+      " sessions</b>, an effective price of <b>" + chf(effective) +
+      " per session</b> versus " + chf(p.unitPrice) + " for a single session. ";
+    if (marginUnit <= 0) {
+      html += "<b>Each single session sells at or below its variable cost</b> (" + chf(p.unitPrice) +
+        " vs " + chf(p.varCost) + " of cost): at these settings, filling single slots destroys margin.";
+    } else if (marginMember < 0) {
+      html += "Each member session <b>loses " + chf(-marginMember) + "</b> after variable cost, while a single session earns " +
+        chf(marginUnit) + ": this membership pricing is below cost.";
+    } else {
+      const ratio = marginMember / marginUnit;
+      if (ratio >= 1) {
+        html += "Each member session brings <b>more margin</b> than a single session (" +
+          chf(marginMember) + " vs " + chf(marginUnit) + "): memberships are profitable per slot, grow them.";
+      } else {
+        html += "Each member session brings <b>" + pct(1 - ratio) + " less margin</b> than a single session (" +
+          chf(marginMember) + " vs " + chf(marginUnit) +
+          "). Memberships buy predictable income, but every slot they occupy earns less; they pay off as long as capacity is not full.";
+      }
+    }
+  }
+  document.getElementById("insight").innerHTML = html;
+}
+
+function renderDetail(p, r) {
+  const rows = [
+    ["section", "Volumes"],
+    ["Capacity (sessions / month)", num(r.capacity)],
+    ["Members served", num1(r.membersServed)],
+    ["Member sessions used", num1(r.memberSessions)],
+    ["Share of members (capacity used)", pct(r.memberShare)],
+    ["Available single-session slots", num1(r.availableSingle)],
+    ["Single sessions filled", num1(r.singleSessions)],
+    ["section", "Money"],
+    ["Membership revenue", chf(r.memberRevenue)],
+    ["Single session revenue", chf(r.singleRevenue)],
+    ["Total revenue", chf(r.revenue)],
+    ["Fixed costs", "&minus; " + chf(p.fixed)],
+    ["Variable costs (" + num1(r.totalSessions) + " sessions)", "&minus; " + chf(r.variableCosts)],
+    ["Monthly profit", chf(r.profit)],
+  ];
+  document.getElementById("detail").innerHTML = rows.map(row =>
+    row[0] === "section"
+      ? "<tr><td class='section' colspan='2'>" + row[1] + "</td></tr>"
+      : "<tr><td>" + row[0] + "</td><td class='num'>" + row[1] + "</td></tr>"
+  ).join("");
+}
+
+/* ---------------- Charts (vanilla canvas) ---------------- */
+function drawChart(canvas, xs, ys, opts) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const padL = 58, padR = 12, padT = 12, padB = 26;
+  const xMin = xs[0], xMax = xs[xs.length - 1];
+  let yMin = Math.min(0, ...ys), yMax = Math.max(0, ...ys);
+  const span = (yMax - yMin) || 1;
+  yMin -= span * .08; yMax += span * .08;
+
+  const X = x => padL + (x - xMin) / (xMax - xMin || 1) * (w - padL - padR);
+  const Y = y => padT + (yMax - y) / (yMax - yMin) * (h - padT - padB);
+
+  ctx.font = "11px 'Helvetica Neue', Arial, sans-serif";
+  ctx.fillStyle = "#6f7a75";
+  ctx.strokeStyle = "#e4e0d7";
+  ctx.lineWidth = 1;
+
+  // y grid: 4 lines
+  for (let i = 0; i <= 4; i++) {
+    const yv = yMin + (yMax - yMin) * i / 4;
+    const yy = Y(yv);
+    ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke();
+    ctx.textAlign = "right";
+    ctx.fillText(Math.round(yv / 1000).toLocaleString("fr-CH") + "k", padL - 6, yy + 3.5);
+  }
+  // x labels
+  ctx.textAlign = "center";
+  for (let i = 0; i <= 4; i++) {
+    const xv = xMin + (xMax - xMin) * i / 4;
+    ctx.fillText(opts.xFmt(xv), X(xv), h - 8);
+  }
+
+  // zero line
+  if (yMin < 0 && yMax > 0) {
+    ctx.strokeStyle = "#b7b2a6"; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(padL, Y(0)); ctx.lineTo(w - padR, Y(0)); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // area under curve above zero
+  ctx.beginPath();
+  xs.forEach((x, i) => { const px = X(x), py = Y(ys[i]); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+  ctx.strokeStyle = "#4d6b5c"; ctx.lineWidth = 2; ctx.stroke();
+
+  // vertical marker
+  if (opts.markX !== undefined && opts.markX >= xMin && opts.markX <= xMax) {
+    ctx.strokeStyle = "#b08d4f"; ctx.lineWidth = 1.5; ctx.setLineDash([2, 3]);
+    ctx.beginPath(); ctx.moveTo(X(opts.markX), padT); ctx.lineTo(X(opts.markX), h - padB); ctx.stroke();
+    ctx.setLineDash([]);
+    if (opts.markLabel) {
+      ctx.fillStyle = "#b08d4f"; ctx.textAlign = "left";
+      ctx.fillText(opts.markLabel, Math.min(X(opts.markX) + 5, w - 80), padT + 10);
+    }
+  }
+
+  // current point, interpolated so the dot sits exactly on the slider value
+  if (opts.dotX !== undefined) {
+    const x = Math.min(Math.max(opts.dotX, xMin), xMax);
+    let j = 1;
+    while (j < xs.length - 1 && xs[j] < x) j++;
+    const x0 = xs[j - 1], x1 = xs[j];
+    const t = x1 > x0 ? (x - x0) / (x1 - x0) : 0;
+    const y = ys[j - 1] + t * (ys[j] - ys[j - 1]);
+    ctx.beginPath();
+    ctx.arc(X(x), Y(y), 5, 0, Math.PI * 2);
+    ctx.fillStyle = "#4d6b5c"; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
+  }
+}
+
+function renderCharts(p) {
+  // Chart 1: profit vs number of members
+  const maxM = Math.max(150, Math.ceil(p.members * 1.5 / 10) * 10);
+  const ms = [], profits1 = [];
+  for (let m = 0; m <= maxM; m += Math.max(1, Math.round(maxM / 100))) {
+    ms.push(m);
+    profits1.push(compute(p, { members: m }).profit);
+  }
+  drawChart(document.getElementById("chart-mix"), ms, profits1, {
+    xFmt: v => Math.round(v).toString(),
+    dotX: p.members,
+  });
+
+  // Chart 2: profit vs single session fill rate
+  const fills = [], profits2 = [];
+  for (let f = 0; f <= 100; f += 2) {
+    fills.push(f);
+    profits2.push(compute(p, { fillrate: f / 100 }).profit);
+  }
+  const be = breakEvenFill(p);
+  const beMark = be !== null && !be.always ? be.fill * 100 : undefined;
+  drawChart(document.getElementById("chart-fill"), fills, profits2, {
+    xFmt: v => Math.round(v) + "%",
+    dotX: p.fillrate * 100,
+    markX: beMark,
+    markLabel: beMark !== undefined ? "break-even: " + Math.round(beMark) + "%" : undefined,
+  });
+}
+
+/* ---------------- Wire-up ---------------- */
+function update() {
+  const p = params();
+  const r = compute(p);
+  renderSliderValues(p);
+  document.getElementById("v-share").textContent = pct(r.memberShare);
+  renderKpis(p, r);
+  renderAlerts(p, r);
+  renderInsight(p, r);
+  renderDetail(p, r);
+  renderCharts(p);
+}
+SLIDERS.forEach(id => document.getElementById(id).addEventListener("input", update));
+window.addEventListener("resize", () => renderCharts(params()));
+update();
+</script>
+</body>
+</html>
